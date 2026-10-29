@@ -20,7 +20,7 @@ jobs:
         run: npm install
 
       - name: Build Ionic app
-        run: npm run build
+        run: npx ionic build --prod
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -46,4 +46,3 @@ jobs:
         with:
           name: app-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          
