@@ -22,56 +22,49 @@ jobs:
           npm install @capacitor/core @capacitor/cli @capacitor/android --save
           npm install -g @angular/cli @capacitor/cli
 
-      - name: Build web app
+      - name: Build web app (force output)
         run: |
-          npx ng build --configuration=production || npx ng build || npm run build --if-present
+          # Try multiple ways to build
+          npx ng build --configuration=production --output-path=www || \
+          npx ng build --output-path=www || \
+          npx ng build || \
+          npm run build --if-present
 
-      - name: Prepare www folder
+          echo "===== AFTER BUILD ====="
+          find . -name "index.html" -not -path "./node_modules/*" | head -20
+          ls -la
+          ls -la www || true
+          ls -la dist || true
+
+      - name: Force create www with index.html
         run: |
-          echo "=== Current directory structure ==="
-          find . -name "index.html" -not -path "./node_modules/*" | head -10
-
-          # Remove old www if exists
           rm -rf www
           mkdir -p www
 
-          # Try common output locations
-          if [ -d "dist" ]; then
-            echo "Found dist folder"
-            # Angular 17+ often uses dist/project-name/browser
-            if [ -d "dist" ] && [ -f "dist/index.html" ]; then
-              cp -r dist/* www/
-            else
-              # Find the browser folder
-              BROWSER_DIR=$(find dist -type d -name "browser" | head -1)
-              if [ -n "$BROWSER_DIR" ]; then
-                echo "Found browser dir: $BROWSER_DIR"
-                cp -r "$BROWSER_DIR"/* www/
-              else
-                # Copy everything from the first subfolder of dist
-                FIRST_DIR=$(find dist -mindepth 1 -maxdepth 1 -type d | head -1)
-                if [ -n "$FIRST_DIR" ]; then
-                  cp -r "$FIRST_DIR"/* www/ || cp -r "$FIRST_DIR"/browser/* www/ || true
-                fi
-              fi
-            fi
+          # Copy from wherever index.html is
+          INDEX=$(find . -name "index.html" -not -path "./node_modules/*" -not -path "./android/*" | head -1)
+          
+          if [ -z "$INDEX" ]; then
+            echo "ERROR: No index.html found after build"
+            echo "Listing all files:"
+            find . -type f -not -path "./node_modules/*" | head -50
+            exit 1
           fi
 
-          echo "=== Contents of www ==="
+          echo "Found index.html at: $INDEX"
+          DIR=$(dirname "$INDEX")
+          echo "Copying from: $DIR"
+          cp -r "$DIR"/* www/
+
+          echo "===== www contents ====="
           ls -la www
 
           if [ ! -f "www/index.html" ]; then
-            echo "Still no index.html, searching again..."
-            INDEX=$(find . -name "index.html" -not -path "./node_modules/*" -not -path "./android/*" | head -1)
-            if [ -n "$INDEX" ]; then
-              echo "Found at: $INDEX"
-              DIR=$(dirname "$INDEX")
-              cp -r "$DIR"/* www/
-            fi
+            echo "Failed to copy index.html"
+            exit 1
           fi
 
-          ls -la www
-          test -f www/index.html && echo "SUCCESS: index.html exists" || echo "FAILED: still no index.html"
+          echo "SUCCESS: www/index.html exists"
 
       - name: Create capacitor config
         run: |
