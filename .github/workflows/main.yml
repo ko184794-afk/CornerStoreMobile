@@ -19,8 +19,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build Ionic app
-        run: npx ionic build --prod
+      - name: Build the app
+        run: npx ng build --configuration=production
 
       - name: Set up JDK
         uses: actions/setup-java@v4
